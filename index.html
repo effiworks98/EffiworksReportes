@@ -5,62 +5,81 @@
 <link rel="icon" type="image/jpg" href="/logo.jpg">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  body { font-family: system-ui, sans-serif; background:#f4f6f8; margin:0;
+  :root { --azul:#1b6ca8; --teal:#2193b0; --oscuro:#0f3c5c; --fondo:#eef4f8; }
+  body { font-family: system-ui, sans-serif; background:var(--fondo); margin:0;
          display:flex; justify-content:center; padding:40px 16px; }
-  .card { background:#fff; border-radius:12px; box-shadow:0 2px 12px rgba(0,0,0,.08);
-          padding:32px; max-width:520px; width:100%; }
-  .header { display:flex; align-items:center; gap:12px; margin-bottom:8px; }
-  .header img { width:48px; height:48px; object-fit:contain; border-radius:8px; }
-  h1 { font-size:1.4rem; margin:0; }
-  label { display:block; margin:16px 0 6px; font-weight:600; font-size:.9rem; }
-  input, select, textarea { width:100%; padding:10px; border:1px solid #ccd3da;
-          border-radius:8px; font-size:1rem; box-sizing:border-box; }
+  .card { background:#fff; border-radius:16px; box-shadow:0 4px 20px rgba(15,60,92,.12);
+          padding:32px; max-width:540px; width:100%; border-top:5px solid var(--teal); }
+  .header { display:flex; align-items:center; gap:14px; margin-bottom:4px; }
+  .header img { width:52px; height:52px; object-fit:contain; }
+  h1 { font-size:1.4rem; margin:0; color:var(--oscuro); }
+  .sub { color:#5a7184; font-size:.88rem; margin:4px 0 8px; }
+  label { display:block; margin:16px 0 6px; font-weight:600; font-size:.9rem; color:var(--oscuro); }
+  input, select, textarea { width:100%; padding:10px; border:1px solid #c3d4e0;
+          border-radius:8px; font-size:1rem; box-sizing:border-box; background:#fbfdfe; }
+  input:focus, select:focus, textarea:focus { outline:2px solid var(--teal); border-color:var(--teal); }
   textarea { min-height:120px; resize:vertical; }
-  button { margin-top:24px; width:100%; padding:12px; background:#2563eb; color:#fff;
-          border:none; border-radius:8px; font-size:1rem; cursor:pointer; }
-  button:disabled { background:#9db4e8; }
+  .sla { font-size:.8rem; color:#5a7184; margin-top:4px; }
+  button { margin-top:24px; width:100%; padding:13px; border:none; border-radius:8px;
+          font-size:1rem; cursor:pointer; color:#fff; font-weight:600;
+          background:linear-gradient(90deg, var(--azul), var(--teal)); }
+  button:disabled { opacity:.55; }
   #msg { margin-top:16px; text-align:center; font-weight:600; }
+  .link { display:block; text-align:center; margin-top:18px; color:var(--azul); font-size:.9rem; }
 </style></head><body>
 <div class="card">
   <div class="header">
     <img src="/logo.jpg" alt="Effiworks">
-    <h1>Reportar una falla</h1>
+    <div><h1>Reportar una falla</h1>
+    <div class="sub">Soporte Effiworks · Consultora en Procesos y Programación aplicada</div></div>
   </div>
   <label>Tu nombre</label><input id="nombre">
-  <label>Contacto (correo o teléfono)</label><input id="contacto">
+  <label>Correo electrónico</label><input id="contacto" type="email" placeholder="Para darte seguimiento y avisarte cuando esté resuelto">
   <label>Plataforma afectada</label>
   <select id="plataforma">
-    <option>Notaría 26</option>
-    <option>Bexalta</option>
-    <option>Sitio Web</option>
-    <option>App Móvil</option>
-    <option>Otro</option>
+    <option>Notaría 26</option><option>Bexalta</option>
+    <option>Sitio Web</option><option>App Móvil</option><option>Otro</option>
   </select>
+  <label>Prioridad</label>
+  <select id="prioridad" onchange="verSla()">
+    <option value="baja">🟢 Baja — no me bloquea</option>
+    <option value="media" selected>🟡 Media — me estorba pero puedo trabajar</option>
+    <option value="alta">🟠 Alta — bloquea parte de mi trabajo</option>
+    <option value="urgente">🔴 Urgente — sistema caído / no puedo operar</option>
+  </select>
+  <div class="sla" id="slaTxt">Tiempo de atención: 12 a 24 horas hábiles</div>
   <label>¿Qué falló? Describe el problema</label><textarea id="descripcion"></textarea>
   <label>Capturas o archivos (opcional, máx 10 MB c/u)</label>
   <input id="archivos" type="file" multiple accept="image/*,.pdf,.doc,.docx,.txt,.log,.zip">
   <button id="btn" onclick="enviar()">Enviar reporte</button>
   <div id="msg"></div>
+  <a class="link" href="/seguimiento.html">🔎 Consultar el estado de mi reporte</a>
 </div>
 <script>
 const SUPABASE_URL = "https://zmaovdswzzsnfaagisni.supabase.co";
-const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InptYW92ZHN3enpzbmZhYWdpc25pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ2NTE5MDAsImV4cCI6MjEwMDIyNzkwMH0.NPjVD5VEOALpcy4sTxpQ543_FSKKuj60rKWwkPTzDZY"; // la anon key es pública por diseño, RLS protege los datos
+const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InptYW92ZHN3enpzbmZhYWdpc25pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ2NTE5MDAsImV4cCI6MjEwMDIyNzkwMH0.NPjVD5VEOALpcy4sTxpQ543_FSKKuj60rKWwkPTzDZY";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+const SLAS = { urgente:'4 a 6 horas hábiles', alta:'6 a 12 horas hábiles',
+               media:'12 a 24 horas hábiles', baja:'24 a 48 horas hábiles' };
+function verSla() {
+  document.getElementById('slaTxt').textContent =
+    'Tiempo de atención: ' + SLAS[document.getElementById('prioridad').value];
+}
 
 async function enviar() {
   const btn = document.getElementById('btn'), msg = document.getElementById('msg');
   const nombre = document.getElementById('nombre').value.trim();
+  const contacto = document.getElementById('contacto').value.trim();
   const descripcion = document.getElementById('descripcion').value.trim();
-  if (!nombre || !descripcion) {
-    msg.textContent = 'Nombre y descripción son obligatorios'; msg.style.color='#dc2626'; return;
+  if (!nombre || !descripcion || !contacto) {
+    msg.textContent = 'Nombre, correo y descripción son obligatorios'; msg.style.color='#dc2626'; return;
   }
   btn.disabled = true; btn.textContent = 'Enviando...';
   try {
-    // 1. Subir archivos directo a Supabase Storage
     const archivos = [];
     for (const f of document.getElementById('archivos').files) {
       if (f.size > 10 * 1024 * 1024) throw new Error(`"${f.name}" pesa más de 10 MB`);
-      // Limpiar nombre: quitar acentos, espacios y caracteres especiales
       const limpio = f.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
                            .replace(/[^a-zA-Z0-9._-]/g, '_');
       const ruta = `${Date.now()}-${Math.random().toString(36).slice(2,8)}-${limpio}`;
@@ -69,19 +88,18 @@ async function enviar() {
       const { data } = sb.storage.from('adjuntos').getPublicUrl(ruta);
       archivos.push({ nombre: f.name, url: data.publicUrl });
     }
-    // 2. Guardar el reporte
-    const contacto = document.getElementById('contacto').value.trim();
-    const plataforma = document.getElementById('plataforma').value;
-    const { error: e2 } = await sb.from('reportes')
-      .insert({ nombre, contacto, plataforma, descripcion, archivos });
-    if (e2) throw e2;
-    // 3. Avisar a Telegram
-    await fetch('/api/notify', {
+    const r = await fetch('/api/reporte', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre, contacto, plataforma, descripcion, archivos })
+      body: JSON.stringify({
+        nombre, contacto, descripcion, archivos,
+        plataforma: document.getElementById('plataforma').value,
+        prioridad: document.getElementById('prioridad').value
+      })
     });
-    msg.textContent = '✅ Reporte enviado. ¡Gracias!'; msg.style.color = '#16a34a';
-    btn.textContent = 'Enviado';
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || 'Error al registrar');
+    msg.innerHTML = `✅ Reporte enviado. Tu folio es el <b>#${j.id}</b>.<br>Guárdalo para consultar tu seguimiento.`;
+    msg.style.color = '#16a34a'; btn.textContent = 'Enviado';
   } catch (e) {
     msg.textContent = '❌ ' + (e.message || 'Error al enviar'); msg.style.color = '#dc2626';
     btn.disabled = false; btn.textContent = 'Enviar reporte';
