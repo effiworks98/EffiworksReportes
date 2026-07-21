@@ -2,15 +2,15 @@ const COLORES = { urgente:'#dc2626', alta:'#ea580c', media:'#ca8a04', baja:'#16a
 
 async function enviarCorreoResuelto(rep) {
   if (!rep.contacto || !rep.contacto.includes('@')) return;
-  await fetch('https://api.resend.com/emails', {
+  await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
-    headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+    headers: { 'api-key': process.env.BREVO_API_KEY,
                'Content-Type': 'application/json' },
     body: JSON.stringify({
-      from: `Soporte Effiworks <${process.env.EMAIL_FROM}>`,
-      to: [rep.contacto],
+      sender: { name: 'Soporte Effiworks', email: process.env.EMAIL_FROM },
+      to: [{ email: rep.contacto, name: rep.nombre }],
       subject: `✅ Tu reporte #${rep.id} ha sido resuelto`,
-      html: `
+      htmlContent: `
         <div style="font-family:system-ui,sans-serif;max-width:520px;margin:auto;
                     border:1px solid #e2e8f0;border-radius:12px;overflow:hidden">
           <div style="background:linear-gradient(90deg,#1b6ca8,#2193b0);color:#fff;padding:20px 24px">
