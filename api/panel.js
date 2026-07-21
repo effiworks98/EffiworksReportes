@@ -82,7 +82,7 @@ export default async function handler(req, res) {
   const abiertos = reportes.filter(x => x.estado !== 'resuelto').length;
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   return res.send(`<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
-<title>Panel · Effiworks</title><link rel="icon" type="image/png" href="/logo.png">
+<title>Panel · Effiworks</title><link rel="icon" type="image/jpg" href="/logo.jpg">
 <style>
   body { font-family: system-ui, sans-serif; margin:0; background:#eef4f8; }
   .top { background:linear-gradient(90deg,#1b6ca8,#2193b0); color:#fff; padding:16px 24px;
@@ -100,7 +100,7 @@ export default async function handler(req, res) {
            font-weight:700; color:#fff; }
   .accion { color:#1b6ca8; font-weight:600; text-decoration:none; font-size:.85rem; }
 </style></head><body>
-<div class="top"><img src="/logo.png"><h1>Panel de reportes</h1>
+<div class="top"><img src="/logo.jpg"><h1>Panel de reportes</h1>
   <span style="margin-left:auto">${abiertos} abiertos / ${reportes.length} totales</span></div>
 <div class="cont"><table>
 <tr><th>ID</th><th>Fecha</th><th>Usuario</th><th>Plataforma</th><th>Prioridad</th>
