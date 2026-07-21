@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Effiworks · Seguimiento de reporte</title>
+<link rel="icon" type="image/png" href="/logo.png">
+<style>
+  :root { --azul:#1b6ca8; --teal:#2193b0; --oscuro:#0f3c5c; --fondo:#eef4f8; }
+  body { font-family: system-ui, sans-serif; background:var(--fondo); margin:0;
+         display:flex; justify-content:center; padding:40px 16px; }
+  .card { background:#fff; border-radius:16px; box-shadow:0 4px 20px rgba(15,60,92,.12);
+          padding:32px; max-width:540px; width:100%; border-top:5px solid var(--teal); }
+  .header { display:flex; align-items:center; gap:14px; }
+  .header img { width:52px; height:52px; object-fit:contain; }
+  h1 { font-size:1.3rem; margin:0; color:var(--oscuro); }
+  label { display:block; margin:16px 0 6px; font-weight:600; font-size:.9rem; color:var(--oscuro); }
+  input { width:100%; padding:10px; border:1px solid #c3d4e0; border-radius:8px;
+          font-size:1rem; box-sizing:border-box; }
+  button { margin-top:24px; width:100%; padding:13px; border:none; border-radius:8px;
+          font-size:1rem; cursor:pointer; color:#fff; font-weight:600;
+          background:linear-gradient(90deg, var(--azul), var(--teal)); }
+  #out { margin-top:20px; }
+  .badge { display:inline-block; padding:3px 10px; border-radius:99px; font-size:.8rem;
+           font-weight:700; color:#fff; }
+  .fila { padding:8px 0; border-bottom:1px solid #e8eef3; font-size:.92rem; }
+  .fila b { color:var(--oscuro); }
+  a { color:var(--azul); }
+</style></head><body>
+<div class="card">
+  <div class="header"><img src="/logo.png" alt="Effiworks"><h1>Seguimiento de reporte</h1></div>
+  <label>Folio</label><input id="folio" type="number" placeholder="Ej. 7">
+  <label>Correo con el que reportaste</label><input id="email" type="email">
+  <button onclick="consultar()">Consultar</button>
+  <div id="out"></div>
+  <p style="text-align:center"><a href="/">← Volver a reportar una falla</a></p>
+</div>
+<script>
+const COLORES = { urgente:'#dc2626', alta:'#ea580c', media:'#ca8a04', baja:'#16a34a' };
+async function consultar() {
+  const out = document.getElementById('out');
+  out.innerHTML = 'Consultando...';
+  const r = await fetch('/api/status', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ folio: document.getElementById('folio').value,
+                           email: document.getElementById('email').value })
+  });
+  const j = await r.json();
+  if (!j.ok) { out.innerHTML = '<span style="color:#dc2626">❌ ' + j.error + '</span>'; return; }
+  const rep = j.reporte;
+  const f = s => s ? new Date(s).toLocaleString('es-MX', { timeZone:'America/Mexico_City' }) : '—';
+  const abierto = rep.estado !== 'resuelto';
+  out.innerHTML = `
+    <div class="fila"><b>Reporte #${rep.id}</b> ·
+      <span class="badge" style="background:${COLORES[rep.prioridad] || '#64748b'}">${rep.prioridad}</span>
+      <span class="badge" style="background:${abierto ? '#1b6ca8' : '#16a34a'}">${abierto ? 'En atención' : 'Resuelto ✓'}</span>
+    </div>
+    <div class="fila"><b>Plataforma:</b> ${rep.plataforma}</div>
+    <div class="fila"><b>Descripción:</b> ${rep.descripcion}</div>
+    <div class="fila"><b>Recibido:</b> ${f(rep.fecha)}</div>
+    <div class="fila"><b>Compromiso de atención:</b> ${f(rep.fecha_limite)}</div>
+    ${rep.resuelto_en ? `<div class="fila"><b>Resuelto el:</b> ${f(rep.resuelto_en)}</div>` : ''}`;
+}
+</script></body></html>
