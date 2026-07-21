@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Effiworks · Reportar una falla</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  body { font-family: system-ui, sans-serif; background:#f4f6f8; margin:0;
+         display:flex; justify-content:center; padding:40px 16px; }
+  .card { background:#fff; border-radius:12px; box-shadow:0 2px 12px rgba(0,0,0,.08);
+          padding:32px; max-width:520px; width:100%; }
+  h1 { font-size:1.4rem; margin-top:0; }
+  label { display:block; margin:16px 0 6px; font-weight:600; font-size:.9rem; }
+  input, select, textarea { width:100%; padding:10px; border:1px solid #ccd3da;
+          border-radius:8px; font-size:1rem; box-sizing:border-box; }
+  textarea { min-height:120px; resize:vertical; }
+  button { margin-top:24px; width:100%; padding:12px; background:#2563eb; color:#fff;
+          border:none; border-radius:8px; font-size:1rem; cursor:pointer; }
+  button:disabled { background:#9db4e8; }
+  #msg { margin-top:16px; text-align:center; font-weight:600; }
+</style></head><body>
+<div class="card">
+  <h1>🛠️ Reportar una falla</h1>
+  <label>Tu nombre</label><input id="nombre">
+  <label>Contacto (correo o teléfono)</label><input id="contacto">
+  <label>Plataforma afectada</label>
+  <select id="plataforma">
+    <option>Notaría 26</option>
+    <option>Bexalta</option>
+    <option>Sitio Web</option>
+    <option>App Móvil</option>
+    <option>Otro</option>
+  </select>
+  <label>¿Qué falló? Describe el problema</label><textarea id="descripcion"></textarea>
+  <label>Capturas o archivos (opcional, máx 10 MB c/u)</label>
+  <input id="archivos" type="file" multiple accept="image/*,.pdf,.doc,.docx,.txt,.log,.zip">
+  <button id="btn" onclick="enviar()">Enviar reporte</button>
+  <div id="msg"></div>
+</div>
+<script>
+const SUPABASE_URL = "https://TU-PROYECTO.supabase.co";
+const SUPABASE_ANON = "TU_ANON_KEY"; // la anon key es pública por diseño, RLS protege los datos
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+async function enviar() {
+  const btn = document.getElementById('btn'), msg = document.getElementById('msg');
+  const nombre = document.getElementById('nombre').value.trim();
+  const descripcion = document.getElementById('descripcion').value.trim();
+  if (!nombre || !descripcion) {
+    msg.textContent = 'Nombre y descripción son obligatorios'; msg.style.color='#dc2626'; return;
+  }
+  btn.disabled = true; btn.textContent = 'Enviando...';
+  try {
+    // 1. Subir archivos directo a Supabase Storage
+    const archivos = [];
+    for (const f of document.getElementById('archivos').files) {
+      if (f.size > 10 * 1024 * 1024) throw new Error(`"${f.name}" pesa más de 10 MB`);
+      const ruta = `${Date.now()}-${Math.random().toString(36).slice(2,8)}-${f.name}`;
+      const { error } = await sb.storage.from('adjuntos').upload(ruta, f);
+      if (error) throw error;
+      const { data } = sb.storage.from('adjuntos').getPublicUrl(ruta);
+      archivos.push({ nombre: f.name, url: data.publicUrl });
+    }
+    // 2. Guardar el reporte
+    const contacto = document.getElementById('contacto').value.trim();
+    const plataforma = document.getElementById('plataforma').value;
+    const { error: e2 } = await sb.from('reportes')
+      .insert({ nombre, contacto, plataforma, descripcion, archivos });
+    if (e2) throw e2;
+    // 3. Avisar a Telegram
+    await fetch('/api/notify', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre, contacto, plataforma, descripcion, archivos })
+    });
+    msg.textContent = '✅ Reporte enviado. ¡Gracias!'; msg.style.color = '#16a34a';
+    btn.textContent = 'Enviado';
+  } catch (e) {
+    msg.textContent = '❌ ' + (e.message || 'Error al enviar'); msg.style.color = '#dc2626';
+    btn.disabled = false; btn.textContent = 'Enviar reporte';
+  }
+}
+</script></body></html>
