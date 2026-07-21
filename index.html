@@ -2,13 +2,16 @@
 <html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Effiworks · Reportar una falla</title>
+<link rel="icon" type="image/png" href="/logo.jpg">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   body { font-family: system-ui, sans-serif; background:#f4f6f8; margin:0;
          display:flex; justify-content:center; padding:40px 16px; }
   .card { background:#fff; border-radius:12px; box-shadow:0 2px 12px rgba(0,0,0,.08);
           padding:32px; max-width:520px; width:100%; }
-  h1 { font-size:1.4rem; margin-top:0; }
+  .header { display:flex; align-items:center; gap:12px; margin-bottom:8px; }
+  .header img { width:48px; height:48px; object-fit:contain; border-radius:8px; }
+  h1 { font-size:1.4rem; margin:0; }
   label { display:block; margin:16px 0 6px; font-weight:600; font-size:.9rem; }
   input, select, textarea { width:100%; padding:10px; border:1px solid #ccd3da;
           border-radius:8px; font-size:1rem; box-sizing:border-box; }
@@ -19,7 +22,10 @@
   #msg { margin-top:16px; text-align:center; font-weight:600; }
 </style></head><body>
 <div class="card">
-  <h1>🛠️ Reportar una falla</h1>
+  <div class="header">
+    <img src="/logo.png" alt="Effiworks">
+    <h1>Reportar una falla</h1>
+  </div>
   <label>Tu nombre</label><input id="nombre">
   <label>Contacto (correo o teléfono)</label><input id="contacto">
   <label>Plataforma afectada</label>
@@ -54,7 +60,10 @@ async function enviar() {
     const archivos = [];
     for (const f of document.getElementById('archivos').files) {
       if (f.size > 10 * 1024 * 1024) throw new Error(`"${f.name}" pesa más de 10 MB`);
-      const ruta = `${Date.now()}-${Math.random().toString(36).slice(2,8)}-${f.name}`;
+      // Limpiar nombre: quitar acentos, espacios y caracteres especiales
+      const limpio = f.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                           .replace(/[^a-zA-Z0-9._-]/g, '_');
+      const ruta = `${Date.now()}-${Math.random().toString(36).slice(2,8)}-${limpio}`;
       const { error } = await sb.storage.from('adjuntos').upload(ruta, f);
       if (error) throw error;
       const { data } = sb.storage.from('adjuntos').getPublicUrl(ruta);
