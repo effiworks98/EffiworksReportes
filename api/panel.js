@@ -2,29 +2,38 @@ const COLORES = { urgente:'#dc2626', alta:'#ea580c', media:'#ca8a04', baja:'#16a
 
 async function enviarCorreoResuelto(rep) {
   if (!rep.contacto || !rep.contacto.includes('@')) return;
-  await fetch('https://api.brevo.com/v3/smtp/email', {
-    method: 'POST',
-    headers: { 'api-key': process.env.BREVO_API_KEY,
-               'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      sender: { name: 'Soporte Effiworks', email: process.env.EMAIL_FROM },
-      to: [{ email: rep.contacto, name: rep.nombre }],
-      subject: `✅ Tu reporte #${rep.id} ha sido resuelto`,
-      htmlContent: `
-        <div style="font-family:system-ui,sans-serif;max-width:520px;margin:auto;
-                    border:1px solid #e2e8f0;border-radius:12px;overflow:hidden">
-          <div style="background:linear-gradient(90deg,#1b6ca8,#2193b0);color:#fff;padding:20px 24px">
-            <h2 style="margin:0">Effiworks · Soporte</h2></div>
-          <div style="padding:24px">
-            <p>Hola <b>${rep.nombre}</b>,</p>
-            <p>Tu reporte <b>#${rep.id}</b> sobre <b>${rep.plataforma}</b> ha sido marcado como
-               <span style="color:#16a34a;font-weight:700">resuelto ✓</span>.</p>
-            <p style="background:#f1f5f9;border-radius:8px;padding:12px;font-size:14px">${rep.descripcion}</p>
-            <p>Si el problema persiste, responde este correo o levanta un nuevo reporte.</p>
-            <p style="color:#64748b;font-size:13px">Gracias por ayudarnos a mejorar.<br>— Equipo Effiworks</p>
-          </div></div>`
-    })
-  });
+  try {
+    if (!process.env.BREVO_API_KEY) throw new Error('Falta BREVO_API_KEY en Vercel');
+    if (!process.env.EMAIL_FROM) throw new Error('Falta EMAIL_FROM en Vercel');
+    const r = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'api-key': process.env.BREVO_API_KEY,
+                 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sender: { name: 'Soporte Effiworks', email: process.env.EMAIL_FROM },
+        to: [{ email: rep.contacto.trim().toLowerCase(), name: rep.nombre }],
+        subject: `✅ Tu reporte #${rep.id} ha sido resuelto`,
+        htmlContent: `
+          <div style="font-family:system-ui,sans-serif;max-width:520px;margin:auto;
+                      border:1px solid #e2e8f0;border-radius:12px;overflow:hidden">
+            <div style="background:linear-gradient(90deg,#1b6ca8,#2193b0);color:#fff;padding:20px 24px">
+              <h2 style="margin:0">Effiworks · Soporte</h2></div>
+            <div style="padding:24px">
+              <p>Hola <b>${rep.nombre}</b>,</p>
+              <p>Tu reporte <b>#${rep.id}</b> sobre <b>${rep.plataforma}</b> ha sido marcado como
+                 <span style="color:#16a34a;font-weight:700">resuelto ✓</span>.</p>
+              <p style="background:#f1f5f9;border-radius:8px;padding:12px;font-size:14px">${rep.descripcion}</p>
+              <p>Si el problema persiste, responde este correo o levanta un nuevo reporte.</p>
+              <p style="color:#64748b;font-size:13px">Gracias por ayudarnos a mejorar.<br>— Equipo Effiworks</p>
+            </div></div>`
+      })
+    });
+    const txt = await r.text();
+    console.log('Brevo status:', r.status, 'respuesta:', txt);
+    if (!r.ok) throw new Error(`Brevo ${r.status}: ${txt}`);
+  } catch (e) {
+    console.error('Error enviando correo:', e.message);
+  }
 }
 
 export default async function handler(req, res) {
